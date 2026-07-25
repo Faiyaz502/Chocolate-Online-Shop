@@ -1,10 +1,10 @@
 package com.example.chocolateShop.controller;
 
 
-import com.example.chocolateShop.Dtos.AuthResponse;
-import com.example.chocolateShop.Dtos.LoginRequest;
-import com.example.chocolateShop.Dtos.RefreshTokenRequest;
-import com.example.chocolateShop.Dtos.RegisterRequest;
+import com.example.chocolateShop.Dtos.Auth.AuthResponse;
+import com.example.chocolateShop.Dtos.Auth.LoginRequest;
+import com.example.chocolateShop.Dtos.Auth.RefreshTokenRequest;
+import com.example.chocolateShop.Dtos.Auth.RegisterRequest;
 import com.example.chocolateShop.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

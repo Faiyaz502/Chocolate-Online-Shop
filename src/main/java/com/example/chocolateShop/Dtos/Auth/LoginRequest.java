@@ -1,4 +1,4 @@
-package com.example.chocolateShop.Dtos;
+package com.example.chocolateShop.Dtos.Auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

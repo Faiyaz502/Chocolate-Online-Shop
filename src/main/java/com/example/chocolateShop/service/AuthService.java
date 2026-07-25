@@ -1,9 +1,9 @@
 package com.example.chocolateShop.service;
 
 
-import com.example.chocolateShop.Dtos.AuthResponse;
-import com.example.chocolateShop.Dtos.LoginRequest;
-import com.example.chocolateShop.Dtos.RegisterRequest;
+import com.example.chocolateShop.Dtos.Auth.AuthResponse;
+import com.example.chocolateShop.Dtos.Auth.LoginRequest;
+import com.example.chocolateShop.Dtos.Auth.RegisterRequest;
 import com.example.chocolateShop.Exceptions.EmailAlreadyExistsException;
 import com.example.chocolateShop.Exceptions.InvalidRefreshTokenException;
 import com.example.chocolateShop.entity.RefreshToken;
@@ -53,6 +53,8 @@ public class AuthService {
                 .build();
 
         user = userRepository.save(user);
+
+        System.out.println();
 
         return buildAuthResponse(user);
     }
