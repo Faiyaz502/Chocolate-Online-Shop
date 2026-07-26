@@ -6,9 +6,9 @@ package com.example.chocolateShop.service;
 
 
 
-import com.example.chocolateShop.Dtos.common.CursorPageResponse;
-import com.example.chocolateShop.Dtos.product.*;
-import com.example.chocolateShop.Exceptions.ResourceNotFoundException;
+import com.example.chocolateShop.dtos.common.CursorPageResponse;
+import com.example.chocolateShop.dtos.product.*;
+import com.example.chocolateShop.exceptions.ResourceNotFoundException;
 import com.example.chocolateShop.entity.Category;
 import com.example.chocolateShop.entity.Product;
 import com.example.chocolateShop.entity.ProductImage;

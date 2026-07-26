@@ -3,10 +3,10 @@ package com.example.chocolateShop.service;
 
 
 
-import com.example.chocolateShop.Dtos.category.CategoryRequest;
-import com.example.chocolateShop.Dtos.category.CategoryResponse;
-import com.example.chocolateShop.Exceptions.DuplicateResourceException;
-import com.example.chocolateShop.Exceptions.ResourceNotFoundException;
+import com.example.chocolateShop.dtos.category.CategoryRequest;
+import com.example.chocolateShop.dtos.category.CategoryResponse;
+import com.example.chocolateShop.exceptions.DuplicateResourceException;
+import com.example.chocolateShop.exceptions.ResourceNotFoundException;
 import com.example.chocolateShop.entity.Category;
 import com.example.chocolateShop.repository.CategoryRepository;
 import com.example.chocolateShop.util.SlugUtil;

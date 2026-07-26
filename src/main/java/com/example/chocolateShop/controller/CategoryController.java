@@ -1,6 +1,6 @@
 package com.example.chocolateShop.controller;
 
-import com.example.chocolateShop.Dtos.category.CategoryResponse;
+import com.example.chocolateShop.dtos.category.CategoryResponse;
 import com.example.chocolateShop.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

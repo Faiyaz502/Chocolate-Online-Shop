@@ -1,11 +1,11 @@
 package com.example.chocolateShop.service;
 
 
-import com.example.chocolateShop.Dtos.Auth.AuthResponse;
-import com.example.chocolateShop.Dtos.Auth.LoginRequest;
-import com.example.chocolateShop.Dtos.Auth.RegisterRequest;
-import com.example.chocolateShop.Exceptions.EmailAlreadyExistsException;
-import com.example.chocolateShop.Exceptions.InvalidRefreshTokenException;
+import com.example.chocolateShop.dtos.auth.AuthResponse;
+import com.example.chocolateShop.dtos.auth.LoginRequest;
+import com.example.chocolateShop.dtos.auth.RegisterRequest;
+import com.example.chocolateShop.exceptions.EmailAlreadyExistsException;
+import com.example.chocolateShop.exceptions.InvalidRefreshTokenException;
 import com.example.chocolateShop.entity.RefreshToken;
 import com.example.chocolateShop.entity.User;
 import com.example.chocolateShop.enums.Role;

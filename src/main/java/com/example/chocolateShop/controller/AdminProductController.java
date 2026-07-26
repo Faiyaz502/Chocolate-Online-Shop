@@ -1,10 +1,10 @@
 package com.example.chocolateShop.controller;
 
-import com.example.chocolateShop.Dtos.common.CursorPageResponse;
-import com.example.chocolateShop.Dtos.product.ProductImageRequest;
-import com.example.chocolateShop.Dtos.product.ProductRequest;
-import com.example.chocolateShop.Dtos.product.ProductResponse;
-import com.example.chocolateShop.Dtos.product.ProductSort;
+import com.example.chocolateShop.dtos.common.CursorPageResponse;
+import com.example.chocolateShop.dtos.product.ProductImageRequest;
+import com.example.chocolateShop.dtos.product.ProductRequest;
+import com.example.chocolateShop.dtos.product.ProductResponse;
+import com.example.chocolateShop.dtos.product.ProductSort;
 import com.example.chocolateShop.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

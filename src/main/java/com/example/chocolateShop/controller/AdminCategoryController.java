@@ -1,8 +1,8 @@
 package com.example.chocolateShop.controller;
 
 
-import com.example.chocolateShop.Dtos.category.CategoryRequest;
-import com.example.chocolateShop.Dtos.category.CategoryResponse;
+import com.example.chocolateShop.dtos.category.CategoryRequest;
+import com.example.chocolateShop.dtos.category.CategoryResponse;
 import com.example.chocolateShop.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

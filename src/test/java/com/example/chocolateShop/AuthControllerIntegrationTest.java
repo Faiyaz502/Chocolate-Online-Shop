@@ -1,9 +1,9 @@
 package com.example.chocolateShop;
 
-import com.example.chocolateShop.Dtos.Auth.AuthResponse;
-import com.example.chocolateShop.Dtos.Auth.LoginRequest;
-import com.example.chocolateShop.Dtos.Auth.RefreshTokenRequest;
-import com.example.chocolateShop.Dtos.Auth.RegisterRequest;
+import com.example.chocolateShop.dtos.auth.AuthResponse;
+import com.example.chocolateShop.dtos.auth.LoginRequest;
+import com.example.chocolateShop.dtos.auth.RefreshTokenRequest;
+import com.example.chocolateShop.dtos.auth.RegisterRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
