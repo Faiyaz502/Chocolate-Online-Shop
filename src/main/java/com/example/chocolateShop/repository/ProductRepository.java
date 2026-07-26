@@ -9,12 +9,13 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
     Optional<Product> findBySlug(String slug);
 
     boolean existsBySlug(String slug);
+
+    long countByActiveTrueAndStockQuantityLessThan(int threshold);
 
     /**
      * Keyset pagination, newest first (id DESC).

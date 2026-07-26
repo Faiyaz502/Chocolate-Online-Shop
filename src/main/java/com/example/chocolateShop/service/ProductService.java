@@ -1,11 +1,5 @@
 package com.example.chocolateShop.service;
 
-
-
-
-
-
-
 import com.example.chocolateShop.dtos.common.CursorPageResponse;
 import com.example.chocolateShop.dtos.product.*;
 import com.example.chocolateShop.exceptions.ResourceNotFoundException;
