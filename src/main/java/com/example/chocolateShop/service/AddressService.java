@@ -2,12 +2,14 @@ package com.example.chocolateShop.service;
 
 import com.example.chocolateShop.dtos.address.AddressRequest;
 import com.example.chocolateShop.dtos.address.AddressResponse;
-import com.example.chocolateShop.exceptions.ResourceNotFoundException;
 import com.example.chocolateShop.entity.Address;
 import com.example.chocolateShop.entity.User;
+import com.example.chocolateShop.exceptions.ResourceNotFoundException;
 import com.example.chocolateShop.repository.AddressRepository;
 import com.example.chocolateShop.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,20 +20,34 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class AddressService {
 
+    private final Logger log = LoggerFactory.getLogger(AddressService.class);
+
     private final AddressRepository addressRepository;
     private final UserRepository userRepository;
 
     public List<AddressResponse> getAllForUser(Long userId) {
-        return addressRepository.findByUserIdOrderByIsDefaultDescCreatedAtDesc(userId)
+        log.info("Fetching all addresses for userId={}", userId);
+
+        List<AddressResponse> addresses = addressRepository
+                .findByUserIdOrderByIsDefaultDescCreatedAtDesc(userId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
+
+        log.info("Found {} address(es) for userId={}", addresses.size(), userId);
+
+        return addresses;
     }
 
     @Transactional
     public AddressResponse create(Long userId, AddressRequest request) {
+        log.info("Creating address for userId={}", userId);
+
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+                .orElseThrow(() -> {
+                    log.warn("User not found. userId={}", userId);
+                    return new ResourceNotFoundException("User not found with id: " + userId);
+                });
 
         boolean makeDefault = Boolean.TRUE.equals(request.isDefault())
                 || addressRepository.findByUserIdOrderByIsDefaultDescCreatedAtDesc(userId).isEmpty();
@@ -53,16 +69,25 @@ public class AddressService {
         address = addressRepository.save(address);
 
         if (makeDefault) {
+            log.info("Setting address {} as default for userId={}", address.getId(), userId);
             addressRepository.clearDefaultForOtherAddresses(userId, address.getId());
         }
+
+        log.info("Address created successfully. addressId={}, userId={}",
+                address.getId(), userId);
 
         return toResponse(address);
     }
 
     @Transactional
     public AddressResponse update(Long userId, Long addressId, AddressRequest request) {
+        log.info("Updating addressId={} for userId={}", addressId, userId);
+
         Address address = addressRepository.findByIdAndUserId(addressId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + addressId));
+                .orElseThrow(() -> {
+                    log.warn("Address not found. addressId={}, userId={}", addressId, userId);
+                    return new ResourceNotFoundException("Address not found with id: " + addressId);
+                });
 
         address.setLabel(request.label());
         address.setRecipientName(request.recipientName());
@@ -75,18 +100,31 @@ public class AddressService {
         address.setCountry(request.country());
 
         if (Boolean.TRUE.equals(request.isDefault())) {
+            log.info("Setting addressId={} as default for userId={}", addressId, userId);
             address.setDefault(true);
             addressRepository.clearDefaultForOtherAddresses(userId, address.getId());
         }
+
+        log.info("Address updated successfully. addressId={}, userId={}",
+                addressId, userId);
 
         return toResponse(address);
     }
 
     @Transactional
     public void delete(Long userId, Long addressId) {
+        log.info("Deleting addressId={} for userId={}", addressId, userId);
+
         Address address = addressRepository.findByIdAndUserId(addressId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + addressId));
+                .orElseThrow(() -> {
+                    log.warn("Address not found. addressId={}, userId={}", addressId, userId);
+                    return new ResourceNotFoundException("Address not found with id: " + addressId);
+                });
+
         addressRepository.delete(address);
+
+        log.info("Address deleted successfully. addressId={}, userId={}",
+                addressId, userId);
     }
 
     private AddressResponse toResponse(Address address) {
