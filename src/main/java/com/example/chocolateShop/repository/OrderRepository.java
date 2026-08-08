@@ -40,4 +40,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("SELECT o.status, COUNT(o) FROM Order o GROUP BY o.status")
     List<Object[]> countGroupedByStatus();
+
+
+
+    /** Guest order history/detail lookup, by the IP address the order was placed from. */
+    List<Order> findByIpAddressOrderByCreatedAtDesc(String ipAddress);
+
+    Optional<Order> findByIdAndIpAddress(Long id, String ipAddress);
 }

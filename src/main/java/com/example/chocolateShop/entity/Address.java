@@ -18,9 +18,9 @@ public class Address {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "user_id", nullable = false)
-//    private User user;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "recipient_name", nullable = false, length = 150)
     private String recipientName;
@@ -28,11 +28,16 @@ public class Address {
     @Column(nullable = false, length = 30)
     private String phone;
 
+
+
     @Column(nullable = false, length = 255)
     private String fullAddress;
 
     @Column(length = 50 , nullable = false)
     private String district;
+
+    @Column(length = 50 , nullable = false)
+    private String postalCode;
 
     @Column(nullable = false, length = 50)
     private String thana;

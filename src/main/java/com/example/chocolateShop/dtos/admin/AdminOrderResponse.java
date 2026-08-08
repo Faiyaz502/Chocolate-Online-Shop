@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+
 @Builder
 public record AdminOrderResponse(
         Long id,
@@ -17,6 +18,8 @@ public record AdminOrderResponse(
         Long customerId,
         String customerName,
         String customerEmail,
+        boolean guestOrder,
+        String guestIpAddress,
         BigDecimal subtotal,
         BigDecimal discountTotal,
         BigDecimal shippingFee,
@@ -28,3 +31,4 @@ public record AdminOrderResponse(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {}
+

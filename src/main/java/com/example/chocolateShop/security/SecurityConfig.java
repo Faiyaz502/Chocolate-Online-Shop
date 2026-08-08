@@ -25,6 +25,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final RateLimitFilter rateLimitFilter;
 
     @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
@@ -53,12 +54,21 @@ public class SecurityConfig {
                         .requestMatchers("GET", "/api/v1/categories/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
 
+                        // Cart, checkout, and order lookup work for guests too (identified
+                        // by IP instead of a JWT) as well as logged-in users -- the JWT
+                        // filter still runs and populates the principal when a valid
+                        // token IS present, so logged-in users get their normal identity.
+                        .requestMatchers("/api/v1/cart/**").permitAll()
+                        .requestMatchers("/api/v1/checkout").permitAll()
+                        .requestMatchers("/api/v1/orders/**").permitAll()
+
                         // Admin-only
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
 
                         // Everything else requires authentication
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

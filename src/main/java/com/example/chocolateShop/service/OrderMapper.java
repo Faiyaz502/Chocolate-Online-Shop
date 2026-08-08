@@ -14,6 +14,7 @@ final class OrderMapper {
     private OrderMapper() {}
 
     static OrderResponse toResponse(Order order) {
+        boolean guest = order.getUser() == null;
         return OrderResponse.builder()
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
@@ -26,19 +27,24 @@ final class OrderMapper {
                 .shippingAddressId(order.getShippingAddress().getId())
                 .items(order.getItems().stream().map(OrderMapper::toItemResponse).toList())
                 .payment(order.getPayment() != null ? toPaymentResponse(order.getPayment()) : null)
+                .guestOrder(guest)
+                .guestEmail(guest ? order.getGuestEmail() : null)
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
                 .build();
     }
 
     static AdminOrderResponse toAdminResponse(Order order) {
+        boolean guest = order.getUser() == null;
         return AdminOrderResponse.builder()
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus())
-                .customerId(order.getUser().getId())
-                .customerName(order.getUser().getFirstName() + " " + order.getUser().getLastName())
-                .customerEmail(order.getUser().getEmail())
+                .customerId(guest ? null : order.getUser().getId())
+                .customerName(guest ? "Guest" : order.getUser().getFirstName() + " " + order.getUser().getLastName())
+                .customerEmail(guest ? order.getGuestEmail() : order.getUser().getEmail())
+                .guestOrder(guest)
+                .guestIpAddress(guest ? order.getIpAddress() : null)
                 .subtotal(order.getSubtotal())
                 .discountTotal(order.getDiscountTotal())
                 .shippingFee(order.getShippingFee())
@@ -53,12 +59,14 @@ final class OrderMapper {
     }
 
     static AdminOrderSummaryResponse toAdminSummary(Order order) {
+        boolean guest = order.getUser() == null;
         return AdminOrderSummaryResponse.builder()
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus())
-                .customerName(order.getUser().getFirstName() + " " + order.getUser().getLastName())
-                .customerEmail(order.getUser().getEmail())
+                .customerName(guest ? "Guest" : order.getUser().getFirstName() + " " + order.getUser().getLastName())
+                .customerEmail(guest ? order.getGuestEmail() : order.getUser().getEmail())
+                .guestOrder(guest)
                 .grandTotal(order.getGrandTotal())
                 .createdAt(order.getCreatedAt())
                 .build();
@@ -86,4 +94,3 @@ final class OrderMapper {
                 .build();
     }
 }
-

@@ -10,6 +10,7 @@ import com.example.chocolateShop.repository.CartItemRepository;
 import com.example.chocolateShop.repository.CartRepository;
 import com.example.chocolateShop.repository.ProductRepository;
 import com.example.chocolateShop.repository.UserRepository;
+import com.example.chocolateShop.util.OwnerRef;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,14 +27,14 @@ public class CartService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
 
-    public CartResponse getCart(Long userId) {
-        Cart cart = getOrCreateCart(userId);
+    public CartResponse getCart(OwnerRef owner) {
+        Cart cart = getOrCreateCart(owner);
         return toResponse(cart);
     }
 
     @Transactional
-    public CartResponse addItem(Long userId, AddCartItemRequest request) {
-        Cart cart = getOrCreateCart(userId);
+    public CartResponse addItem(OwnerRef owner, AddCartItemRequest request) {
+        Cart cart = getOrCreateCart(owner);
 
         Product product = productRepository.findById(request.productId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -58,8 +59,8 @@ public class CartService {
     }
 
     @Transactional
-    public CartResponse updateItemQuantity(Long userId, Long productId, int quantity) {
-        Cart cart = getOrCreateCart(userId);
+    public CartResponse updateItemQuantity(OwnerRef owner, Long productId, int quantity) {
+        Cart cart = getOrCreateCart(owner);
 
         CartItem item = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -77,8 +78,8 @@ public class CartService {
     }
 
     @Transactional
-    public CartResponse removeItem(Long userId, Long productId) {
-        Cart cart = getOrCreateCart(userId);
+    public CartResponse removeItem(OwnerRef owner, Long productId) {
+        Cart cart = getOrCreateCart(owner);
 
         CartItem item = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -91,9 +92,53 @@ public class CartService {
     }
 
     @Transactional
-    public void clearCart(Long userId) {
-        Cart cart = getOrCreateCart(userId);
+    public void clearCart(OwnerRef owner) {
+        Cart cart = getOrCreateCart(owner);
         cart.getItems().clear();
+    }
+
+    /**
+     * Reassigns a guest cart to a newly logged-in/registered user, merging
+     * quantities into any existing cart the user already has (e.g. from a
+     * previous session on another device). Call this right after login or
+     * registration when the request carried a guest cart.
+     * <p>
+     * Safe to call even if the guest cart is empty or doesn't exist --
+     * it's a no-op in that case.
+     */
+    @Transactional
+    public void claimGuestCart(String ipAddress, Long userId) {
+        var guestCartOpt = cartRepository.findByIpAddress(ipAddress);
+        if (guestCartOpt.isEmpty()) {
+            return;
+        }
+        Cart guestCart = guestCartOpt.get();
+        if (guestCart.getItems().isEmpty()) {
+            cartRepository.delete(guestCart);
+            return;
+        }
+
+        Cart userCart = getOrCreateCart(OwnerRef.ofUser(userId));
+
+        for (CartItem guestItem : guestCart.getItems()) {
+            var existing = cartItemRepository.findByCartIdAndProductId(userCart.getId(), guestItem.getProduct().getId());
+            if (existing.isPresent()) {
+                int merged = existing.get().getQuantity() + guestItem.getQuantity();
+                int cappedQty = Math.min(merged, guestItem.getProduct().getStockQuantity());
+                existing.get().setQuantity(Math.max(cappedQty, existing.get().getQuantity()));
+            } else {
+                int cappedQty = Math.min(guestItem.getQuantity(), guestItem.getProduct().getStockQuantity());
+                if (cappedQty > 0) {
+                    CartItem moved = CartItem.builder()
+                            .product(guestItem.getProduct())
+                            .quantity(cappedQty)
+                            .build();
+                    userCart.addOrIncrementItem(moved);
+                }
+            }
+        }
+
+        cartRepository.delete(guestCart);
     }
 
     // ---------------------------------------------------------
@@ -110,10 +155,15 @@ public class CartService {
         }
     }
 
-    Cart getOrCreateCart(Long userId) {
-        return cartRepository.findByUserId(userId).orElseGet(() -> {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+    Cart getOrCreateCart(OwnerRef owner) {
+        if (owner.isGuest()) {
+            return cartRepository.findByIpAddress(owner.ipAddress())
+                    .orElseGet(() -> cartRepository.save(Cart.builder().ipAddress(owner.ipAddress()).build()));
+        }
+
+        return cartRepository.findByUserId(owner.userId()).orElseGet(() -> {
+            User user = userRepository.findById(owner.userId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + owner.userId()));
             Cart newCart = Cart.builder().user(user).build();
             return cartRepository.save(newCart);
         });
@@ -160,4 +210,5 @@ public class CartService {
                 .availableStock(product.getStockQuantity())
                 .build();
     }
+
 }

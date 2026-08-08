@@ -21,6 +21,9 @@ public record OrderResponse(
         Long shippingAddressId,
         List<OrderItemResponse> items,
         PaymentResponse payment,
+        boolean guestOrder,
+        String guestEmail,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {}
+

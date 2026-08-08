@@ -20,12 +20,13 @@ public class Cart {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-//    @OneToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "user_id", nullable = false, unique = true)
-//    private User user;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", unique = true)
+    private User user;
 
-    @Column(name = "user_ip")
-    private String ipAddress ;
+    /** Set only for guest carts (user == null); identifies the owner by IP instead. */
+    @Column(name = "ip_address", length = 45, unique = true)
+    private String ipAddress;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default

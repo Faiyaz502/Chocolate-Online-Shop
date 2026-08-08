@@ -4,6 +4,9 @@ import com.example.chocolateShop.dtos.checkout.CheckoutRequest;
 import com.example.chocolateShop.dtos.checkout.OrderResponse;
 import com.example.chocolateShop.security.UserPrincipal;
 import com.example.chocolateShop.service.CheckoutService;
+import com.example.chocolateShop.util.ClientIpUtil;
+import com.example.chocolateShop.util.OwnerRef;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,8 +26,13 @@ public class CheckoutController {
 
     @PostMapping
     public ResponseEntity<OrderResponse> checkout(@AuthenticationPrincipal UserPrincipal principal,
+                                                  HttpServletRequest httpRequest,
                                                   @Valid @RequestBody CheckoutRequest request) {
-        OrderResponse response = checkoutService.checkout(principal.getId(), request);
+        OwnerRef owner = principal != null
+                ? OwnerRef.ofUser(principal.getId())
+                : OwnerRef.ofGuest(ClientIpUtil.resolve(httpRequest));
+
+        OrderResponse response = checkoutService.checkout(owner, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

@@ -1,5 +1,6 @@
 package com.example.chocolateShop.service;
 
+import com.example.chocolateShop.dtos.address.AddressRequest;
 import com.example.chocolateShop.dtos.checkout.CheckoutRequest;
 import com.example.chocolateShop.dtos.checkout.OrderResponse;
 
@@ -11,6 +12,7 @@ import com.example.chocolateShop.repository.AddressRepository;
 import com.example.chocolateShop.repository.OrderRepository;
 import com.example.chocolateShop.repository.ProductRepository;
 import com.example.chocolateShop.repository.UserRepository;
+import com.example.chocolateShop.util.OwnerRef;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,15 +42,15 @@ public class CheckoutService {
     private final UserRepository userRepository;
 
     @Transactional
-    public OrderResponse checkout(Long userId, CheckoutRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+    public OrderResponse checkout(OwnerRef owner, CheckoutRequest request) {
+        User user = owner.isGuest()
+                ? null
+                : userRepository.findById(owner.userId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + owner.userId()));
 
-        Address address = addressRepository.findByIdAndUserId(request.shippingAddressId(), userId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Address not found with id: " + request.shippingAddressId()));
+        Address address = resolveShippingAddress(owner, user, request);
 
-        Cart cart = cartService.getOrCreateCart(userId);
+        Cart cart = cartService.getOrCreateCart(owner);
         if (cart.getItems().isEmpty()) {
             throw new EmptyCartException("Your cart is empty");
         }
@@ -88,6 +90,8 @@ public class CheckoutService {
 
         Order order = Order.builder()
                 .user(user)
+                .ipAddress(owner.isGuest() ? owner.ipAddress() : null)
+                .guestEmail(owner.isGuest() ? request.guestEmail() : null)
                 .orderNumber(generateOrderNumber())
                 .status(OrderStatus.PENDING)
                 .subtotal(subtotal)
@@ -129,9 +133,55 @@ public class CheckoutService {
             couponService.incrementUsage(appliedCoupon);
         }
 
-        cartService.clearCart(userId);
+        cartService.clearCart(owner);
 
         return OrderMapper.toResponse(order);
+    }
+
+    /**
+     * Exactly one of a saved address (logged-in users only) or an inline
+     * one-off address must be supplied. Guests can only use the inline
+     * form, since they have no account to own a saved address.
+     */
+    private Address resolveShippingAddress(OwnerRef owner, User user, CheckoutRequest request) {
+        boolean hasSavedAddressId = request.shippingAddressId() != null;
+        boolean hasInlineAddress = request.shippingAddress() != null;
+
+        if (hasSavedAddressId == hasInlineAddress) {
+            throw new IllegalArgumentException(
+                    "Provide exactly one of shippingAddressId (a saved address) or shippingAddress (a one-off address)");
+        }
+
+        if (owner.isGuest()) {
+            if (hasSavedAddressId) {
+                throw new IllegalArgumentException("Guest checkout requires an inline shippingAddress, not a saved shippingAddressId");
+            }
+            if (request.guestEmail() == null || request.guestEmail().isBlank()) {
+                throw new IllegalArgumentException("guestEmail is required for guest checkout");
+            }
+            return saveInlineAddress(null, request.shippingAddress());
+        }
+
+        if (hasSavedAddressId) {
+            return addressRepository.findByIdAndUserId(request.shippingAddressId(), owner.userId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Address not found with id: " + request.shippingAddressId()));
+        }
+
+        return saveInlineAddress(user, request.shippingAddress());
+    }
+
+    private Address saveInlineAddress(User user, AddressRequest addressRequest) {
+        Address address = Address.builder()
+                .user(user)
+                .thana(addressRequest.thana())
+                .recipientName(addressRequest.recipientName())
+                .phone(addressRequest.phone())
+                .district(addressRequest.district())
+                .postalCode(addressRequest.postalCode())
+                .isDefault(false)
+                .build();
+        return addressRepository.save(address);
     }
 
     private String generateOrderNumber() {

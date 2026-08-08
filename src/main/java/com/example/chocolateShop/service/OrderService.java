@@ -4,6 +4,7 @@ import com.example.chocolateShop.dtos.checkout.OrderResponse;
 import com.example.chocolateShop.exceptions.ResourceNotFoundException;
 import com.example.chocolateShop.entity.*;
 import com.example.chocolateShop.repository.OrderRepository;
+import com.example.chocolateShop.util.OwnerRef;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,16 +20,15 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
 
-    public List<OrderResponse> getMyOrders(Long userId) {
-        return orderRepository.findByUserIdOrderByCreatedAtDesc(userId)
-                .stream()
-                .map(OrderMapper::toResponse)
-                .toList();
+    public List<OrderResponse> getMyOrders(OwnerRef owner) {
+        List<Order> orders = owner.isGuest()
+                ? orderRepository.findByIpAddressOrderByCreatedAtDesc(owner.ipAddress())
+                : orderRepository.findByUserIdOrderByCreatedAtDesc(owner.userId());
+        return orders.stream().map(OrderMapper::toResponse).toList();
     }
 
-    public OrderResponse getMyOrder(Long userId, Long orderId) {
-        Order order = orderRepository.findByIdAndUserId(orderId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+    public OrderResponse getMyOrder(OwnerRef owner, Long orderId) {
+        Order order = findOwnedOrder(owner, orderId);
         return OrderMapper.toResponse(order);
     }
 
@@ -42,9 +42,8 @@ public class OrderService {
      * the order/payment status model and every caller stay the same.
      */
     @Transactional
-    public OrderResponse confirmCardPayment(Long userId, Long orderId) {
-        Order order = orderRepository.findByIdAndUserId(orderId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+    public OrderResponse confirmCardPayment(OwnerRef owner, Long orderId) {
+        Order order = findOwnedOrder(owner, orderId);
 
         Payment payment = order.getPayment();
         if (payment == null || payment.getMethod() != PaymentMethod.CARD) {
@@ -63,5 +62,13 @@ public class OrderService {
         }
 
         return OrderMapper.toResponse(order);
+    }
+
+    private Order findOwnedOrder(OwnerRef owner, Long orderId) {
+        return owner.isGuest()
+                ? orderRepository.findByIdAndIpAddress(orderId, owner.ipAddress())
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId))
+                : orderRepository.findByIdAndUserId(orderId, owner.userId())
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
     }
 }

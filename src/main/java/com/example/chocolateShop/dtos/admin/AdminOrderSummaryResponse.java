@@ -6,6 +6,7 @@ import lombok.Builder;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+
 @Builder
 public record AdminOrderSummaryResponse(
         Long id,
@@ -13,6 +14,8 @@ public record AdminOrderSummaryResponse(
         OrderStatus status,
         String customerName,
         String customerEmail,
+        boolean guestOrder,
         BigDecimal grandTotal,
         LocalDateTime createdAt
 ) {}
+
