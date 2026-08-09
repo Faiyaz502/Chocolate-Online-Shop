@@ -97,6 +97,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Caching with expire for rate limit -->
+
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
         <!-- Dev tools -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
