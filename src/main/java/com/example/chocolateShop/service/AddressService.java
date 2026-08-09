@@ -54,15 +54,11 @@ public class AddressService {
 
         Address address = Address.builder()
                 .user(user)
-                .label(request.label())
+                .thana(request.thana())
                 .recipientName(request.recipientName())
                 .phone(request.phone())
-                .line1(request.line1())
-                .line2(request.line2())
-                .city(request.city())
-                .state(request.state())
+                .district(request.district())
                 .postalCode(request.postalCode())
-                .country(request.country())
                 .isDefault(makeDefault)
                 .build();
 
@@ -89,15 +85,11 @@ public class AddressService {
                     return new ResourceNotFoundException("Address not found with id: " + addressId);
                 });
 
-        address.setLabel(request.label());
         address.setRecipientName(request.recipientName());
         address.setPhone(request.phone());
-        address.setLine1(request.line1());
-        address.setLine2(request.line2());
-        address.setCity(request.city());
-        address.setState(request.state());
+        address.setThana(request.thana());
+        address.setDistrict(request.district());
         address.setPostalCode(request.postalCode());
-        address.setCountry(request.country());
 
         if (Boolean.TRUE.equals(request.isDefault())) {
             log.info("Setting addressId={} as default for userId={}", addressId, userId);
@@ -130,15 +122,11 @@ public class AddressService {
     private AddressResponse toResponse(Address address) {
         return AddressResponse.builder()
                 .id(address.getId())
-                .label(address.getLabel())
                 .recipientName(address.getRecipientName())
                 .phone(address.getPhone())
-                .line1(address.getLine1())
-                .line2(address.getLine2())
-                .city(address.getCity())
-                .state(address.getState())
+                .thana(address.getThana())
+                .district(address.getDistrict())
                 .postalCode(address.getPostalCode())
-                .country(address.getCountry())
                 .isDefault(address.isDefault())
                 .build();
     }

@@ -1,6 +1,8 @@
 spring:
   application:
-    name: chocolateShop
+    name:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
 
   datasource:
     url: jdbc:postgresql://localhost:5432/chocolate_shop
@@ -10,7 +12,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create-drop   # Flyway owns the schema, Hibernate only validates it
+      ddl-auto: validate   # Flyway owns the schema, Hibernate only validates it
     show-sql: false
     properties:
       hibernate:
@@ -29,6 +31,7 @@ server:
   error:
     include-message: always
     include-binding-errors: always
+  shutdown: graceful
 
 app:
   jwt:
