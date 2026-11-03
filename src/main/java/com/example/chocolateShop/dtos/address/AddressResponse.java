@@ -5,9 +5,14 @@ import lombok.Builder;
 @Builder
 public record AddressResponse(
         Long id,
+        String label,
         String recipientName,
         String phone,
+        String line1,
+        String line2,
         String city,
+        String state,
         String postalCode,
-        boolean isDefault,
-        String district, String thana) {}
+        String country,
+        boolean isDefault
+) {}

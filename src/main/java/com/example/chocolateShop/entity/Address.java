@@ -18,9 +18,13 @@ public class Address {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Nullable for legacy guest-order addresses; current address APIs require an account.
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id")
     private User user;
+
+    @Column(length = 50)
+    private String label;
 
     @Column(name = "recipient_name", nullable = false, length = 150)
     private String recipientName;
@@ -28,20 +32,23 @@ public class Address {
     @Column(nullable = false, length = 30)
     private String phone;
 
+    @Column(name = "line1", nullable = false, length = 255)
+    private String line1;
 
+    @Column(name = "line2", length = 255)
+    private String line2;
 
-    @Column(nullable = false, length = 255)
-    private String fullAddress;
+    @Column(nullable = false, length = 100)
+    private String city;
 
-    @Column(length = 50 , nullable = false)
-    private String district;
+    @Column(length = 100)
+    private String state;
 
-    @Column(length = 50 , nullable = false)
+    @Column(name = "postal_code", nullable = false, length = 20)
     private String postalCode;
 
-    @Column(nullable = false, length = 50)
-    private String thana;
-
+    @Column(nullable = false, length = 100)
+    private String country;
 
     @Column(name = "is_default", nullable = false)
     @Builder.Default

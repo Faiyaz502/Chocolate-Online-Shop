@@ -54,11 +54,15 @@ public class AddressService {
 
         Address address = Address.builder()
                 .user(user)
-                .thana(request.thana())
+                .label(request.label())
                 .recipientName(request.recipientName())
                 .phone(request.phone())
-                .district(request.district())
+                .line1(request.line1())
+                .line2(request.line2())
+                .city(request.city())
+                .state(request.state())
                 .postalCode(request.postalCode())
+                .country(request.country())
                 .isDefault(makeDefault)
                 .build();
 
@@ -87,9 +91,13 @@ public class AddressService {
 
         address.setRecipientName(request.recipientName());
         address.setPhone(request.phone());
-        address.setThana(request.thana());
-        address.setDistrict(request.district());
+        address.setLabel(request.label());
+        address.setLine1(request.line1());
+        address.setLine2(request.line2());
+        address.setCity(request.city());
+        address.setState(request.state());
         address.setPostalCode(request.postalCode());
+        address.setCountry(request.country());
 
         if (Boolean.TRUE.equals(request.isDefault())) {
             log.info("Setting addressId={} as default for userId={}", addressId, userId);
@@ -122,11 +130,15 @@ public class AddressService {
     private AddressResponse toResponse(Address address) {
         return AddressResponse.builder()
                 .id(address.getId())
+                .label(address.getLabel())
                 .recipientName(address.getRecipientName())
                 .phone(address.getPhone())
-                .thana(address.getThana())
-                .district(address.getDistrict())
+                .line1(address.getLine1())
+                .line2(address.getLine2())
+                .city(address.getCity())
+                .state(address.getState())
                 .postalCode(address.getPostalCode())
+                .country(address.getCountry())
                 .isDefault(address.isDefault())
                 .build();
     }
