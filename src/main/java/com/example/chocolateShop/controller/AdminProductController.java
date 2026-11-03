@@ -1,16 +1,17 @@
 package com.example.chocolateShop.controller;
 
 import com.example.chocolateShop.dtos.common.CursorPageResponse;
-import com.example.chocolateShop.dtos.product.ProductImageRequest;
 import com.example.chocolateShop.dtos.product.ProductRequest;
 import com.example.chocolateShop.dtos.product.ProductResponse;
 import com.example.chocolateShop.dtos.product.ProductSort;
 import com.example.chocolateShop.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 
@@ -54,10 +55,22 @@ public class AdminProductController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{id}/images")
+    @PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ProductResponse> addImage(@PathVariable Long id,
-                                                     @Valid @RequestBody ProductImageRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(productService.addImage(id, request));
+                                                     @RequestParam("file") MultipartFile file,
+                                                     @RequestParam(required = false) Integer displayOrder,
+                                                     @RequestParam(required = false) Boolean primary) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(productService.addImage(id, file, displayOrder, primary));
+    }
+
+    @PutMapping(value = "/{id}/images/{imageId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ProductResponse> replaceImage(@PathVariable Long id,
+                                                         @PathVariable Long imageId,
+                                                         @RequestParam("file") MultipartFile file,
+                                                         @RequestParam(required = false) Integer displayOrder,
+                                                         @RequestParam(required = false) Boolean primary) {
+        return ResponseEntity.ok(productService.replaceImage(id, imageId, file, displayOrder, primary));
     }
 
     @DeleteMapping("/{id}/images/{imageId}")

@@ -97,50 +97,6 @@ public class CartService {
         cart.getItems().clear();
     }
 
-    /**
-     * Reassigns a guest cart to a newly logged-in/registered user, merging
-     * quantities into any existing cart the user already has (e.g. from a
-     * previous session on another device). Call this right after login or
-     * registration when the request carried a guest cart.
-     * <p>
-     * Safe to call even if the guest cart is empty or doesn't exist --
-     * it's a no-op in that case.
-     */
-    @Transactional
-    public void claimGuestCart(String ipAddress, Long userId) {
-        var guestCartOpt = cartRepository.findByIpAddress(ipAddress);
-        if (guestCartOpt.isEmpty()) {
-            return;
-        }
-        Cart guestCart = guestCartOpt.get();
-        if (guestCart.getItems().isEmpty()) {
-            cartRepository.delete(guestCart);
-            return;
-        }
-
-        Cart userCart = getOrCreateCart(OwnerRef.ofUser(userId));
-
-        for (CartItem guestItem : guestCart.getItems()) {
-            var existing = cartItemRepository.findByCartIdAndProductId(userCart.getId(), guestItem.getProduct().getId());
-            if (existing.isPresent()) {
-                int merged = existing.get().getQuantity() + guestItem.getQuantity();
-                int cappedQty = Math.min(merged, guestItem.getProduct().getStockQuantity());
-                existing.get().setQuantity(Math.max(cappedQty, existing.get().getQuantity()));
-            } else {
-                int cappedQty = Math.min(guestItem.getQuantity(), guestItem.getProduct().getStockQuantity());
-                if (cappedQty > 0) {
-                    CartItem moved = CartItem.builder()
-                            .product(guestItem.getProduct())
-                            .quantity(cappedQty)
-                            .build();
-                    userCart.addOrIncrementItem(moved);
-                }
-            }
-        }
-
-        cartRepository.delete(guestCart);
-    }
-
     // ---------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------
@@ -156,11 +112,6 @@ public class CartService {
     }
 
     Cart getOrCreateCart(OwnerRef owner) {
-        if (owner.isGuest()) {
-            return cartRepository.findByIpAddress(owner.ipAddress())
-                    .orElseGet(() -> cartRepository.save(Cart.builder().ipAddress(owner.ipAddress()).build()));
-        }
-
         return cartRepository.findByUserId(owner.userId()).orElseGet(() -> {
             User user = userRepository.findById(owner.userId())
                     .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + owner.userId()));

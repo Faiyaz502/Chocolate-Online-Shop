@@ -21,11 +21,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+import java.util.HexFormat;
+import java.security.SecureRandom;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -54,8 +61,6 @@ public class AuthService {
 
         user = userRepository.save(user);
 
-        System.out.println();
-
         return buildAuthResponse(user);
     }
 
@@ -71,9 +76,9 @@ public class AuthService {
         return buildAuthResponse(user);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
     public AuthResponse refresh(String rawRefreshToken) {
-        RefreshToken storedToken = refreshTokenRepository.findByToken(rawRefreshToken)
+        RefreshToken storedToken = refreshTokenRepository.findByTokenHash(hashToken(rawRefreshToken))
                 .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token not recognized"));
 
         if (storedToken.isRevoked() || storedToken.getExpiresAt().isBefore(LocalDateTime.now())) {
@@ -81,6 +86,11 @@ public class AuthService {
         }
 
         User user = storedToken.getUser();
+        if (!user.isEnabled()) {
+            storedToken.setRevoked(true);
+            refreshTokenRepository.save(storedToken);
+            throw new InvalidRefreshTokenException("Refresh token is expired or revoked");
+        }
 
         // Rotate: revoke the old token, issue a new pair
         storedToken.setRevoked(true);
@@ -91,7 +101,7 @@ public class AuthService {
 
     @Transactional
     public void logout(String rawRefreshToken) {
-        refreshTokenRepository.findByToken(rawRefreshToken)
+        refreshTokenRepository.findByTokenHash(hashToken(rawRefreshToken))
                 .ifPresent(token -> {
                     token.setRevoked(true);
                     refreshTokenRepository.save(token);
@@ -102,10 +112,12 @@ public class AuthService {
         String accessToken = jwtTokenProvider.generateAccessToken(
                 user.getId(), user.getEmail(), user.getRole().name());
 
-        String refreshTokenValue = UUID.randomUUID().toString();
+        byte[] randomBytes = new byte[32];
+        SECURE_RANDOM.nextBytes(randomBytes);
+        String refreshTokenValue = Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
         RefreshToken refreshToken = RefreshToken.builder()
                 .user(user)
-                .token(refreshTokenValue)
+                .tokenHash(hashToken(refreshTokenValue))
                 .expiresAt(LocalDateTime.now().plusSeconds(refreshTokenExpirationMs / 1000))
                 .revoked(false)
                 .build();
@@ -120,5 +132,14 @@ public class AuthService {
                 .lastName(user.getLastName())
                 .role(user.getRole().name())
                 .build();
+    }
+
+    private String hashToken(String token) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 is not available", impossible);
+        }
     }
 }

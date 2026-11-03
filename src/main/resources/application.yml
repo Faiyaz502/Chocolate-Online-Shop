@@ -5,14 +5,19 @@ spring:
     timeout-per-shutdown-phase: 30s
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/chocolate_shop
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:root}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/chocolate_shop}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
 
   jpa:
     hibernate:
-      ddl-auto: validate   # Flyway owns the schema, Hibernate only validates it
+      ddl-auto: validate # Flyway owns the schema; Hibernate must not mutate it
     show-sql: false
     properties:
       hibernate:
@@ -29,13 +34,15 @@ spring:
 server:
   port: 8080
   error:
-    include-message: always
-    include-binding-errors: always
+    include-message: never
+    include-binding-errors: never
   shutdown: graceful
 
 app:
+  uploads:
+    product-image-directory: ${PRODUCT_IMAGE_DIRECTORY:uploads/products}
   jwt:
-    secret: ${JWT_SECRET:change-this-to-a-long-random-secret-in-prod-min-256-bits}
+    secret: ${JWT_SECRET}
     access-token-expiration-ms: 900000        # 15 minutes
     refresh-token-expiration-ms: 604800000    # 7 days
   cors:
@@ -43,5 +50,5 @@ app:
 
 logging:
   level:
-    com.chocolateshop: DEBUG
+    com.example.chocolateShop: INFO
     org.springframework.security: INFO

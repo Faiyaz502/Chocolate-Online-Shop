@@ -5,9 +5,7 @@ import com.example.chocolateShop.dtos.cart.CartResponse;
 import com.example.chocolateShop.dtos.cart.UpdateCartItemRequest;
 import com.example.chocolateShop.security.UserPrincipal;
 import com.example.chocolateShop.service.CartService;
-import com.example.chocolateShop.util.ClientIpUtil;
 import com.example.chocolateShop.util.OwnerRef;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,44 +20,37 @@ public class CartController {
     private final CartService cartService;
 
     @GetMapping
-    public ResponseEntity<CartResponse> getCart(@AuthenticationPrincipal UserPrincipal principal,
-                                                HttpServletRequest request) {
-        return ResponseEntity.ok(cartService.getCart(resolveOwner(principal, request)));
+    public ResponseEntity<CartResponse> getCart(@AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(cartService.getCart(resolveOwner(principal)));
     }
 
     @PostMapping("/items")
     public ResponseEntity<CartResponse> addItem(@AuthenticationPrincipal UserPrincipal principal,
-                                                HttpServletRequest request,
                                                 @Valid @RequestBody AddCartItemRequest addRequest) {
-        return ResponseEntity.ok(cartService.addItem(resolveOwner(principal, request), addRequest));
+        return ResponseEntity.ok(cartService.addItem(resolveOwner(principal), addRequest));
     }
 
     @PutMapping("/items/{productId}")
-    public ResponseEntity<CartResponse> updateItem(@AuthenticationPrincipal UserPrincipal principal,
-                                                   HttpServletRequest request,
-                                                   @PathVariable Long productId,
-                                                   @Valid @RequestBody UpdateCartItemRequest updateRequest) {
-        OwnerRef owner = resolveOwner(principal, request);
-        return ResponseEntity.ok(cartService.updateItemQuantity(owner, productId, updateRequest.quantity()));
+    public ResponseEntity<CartResponse> updateItemQuantity(@AuthenticationPrincipal UserPrincipal principal,
+                                                           @PathVariable Long productId,
+                                                           @Valid @RequestBody UpdateCartItemRequest updateRequest) {
+        return ResponseEntity.ok(cartService.updateItemQuantity(
+                resolveOwner(principal), productId, updateRequest.quantity()));
     }
 
     @DeleteMapping("/items/{productId}")
     public ResponseEntity<CartResponse> removeItem(@AuthenticationPrincipal UserPrincipal principal,
-                                                   HttpServletRequest request,
                                                    @PathVariable Long productId) {
-        return ResponseEntity.ok(cartService.removeItem(resolveOwner(principal, request), productId));
+        return ResponseEntity.ok(cartService.removeItem(resolveOwner(principal), productId));
     }
 
     @DeleteMapping
-    public ResponseEntity<Void> clearCart(@AuthenticationPrincipal UserPrincipal principal,
-                                          HttpServletRequest request) {
-        cartService.clearCart(resolveOwner(principal, request));
+    public ResponseEntity<Void> clearCart(@AuthenticationPrincipal UserPrincipal principal) {
+        cartService.clearCart(resolveOwner(principal));
         return ResponseEntity.noContent().build();
     }
 
-    private OwnerRef resolveOwner(UserPrincipal principal, HttpServletRequest request) {
-        return principal != null
-                ? OwnerRef.ofUser(principal.getId())
-                : OwnerRef.ofGuest(ClientIpUtil.resolve(request));
+    private OwnerRef resolveOwner(UserPrincipal principal) {
+        return OwnerRef.ofUser(principal.getId());
     }
 }

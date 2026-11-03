@@ -181,7 +181,7 @@ class CartApiTest extends BaseIntegrationTest {
                 categoryResult.getResponse().getContentAsString(), CategoryResponse.class);
 
         ProductRequest productRequest = new ProductRequest(
-                category.id(), name, "desc", price, null, stock, true, null);
+                category.id(), name, "desc", price, null, stock, true);
         MvcResult productResult = mockMvc.perform(post("/api/v1/admin/products")
                         .header("Authorization", bearer(adminToken))
                         .contentType(MediaType.APPLICATION_JSON)

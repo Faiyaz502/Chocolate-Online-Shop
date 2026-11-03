@@ -38,7 +38,7 @@ class CheckoutApiTest extends BaseIntegrationTest {
         String adminToken = createAdminAndGetToken();
         Long addressId = createAddress(auth.accessToken());
 
-        CheckoutRequest request = new CheckoutRequest(addressId, null, PaymentMethod.COD);
+        CheckoutRequest request = new CheckoutRequest(addressId, null, null, PaymentMethod.COD);
 
         mockMvc.perform(post(CHECKOUT_URL)
                         .header("Authorization", bearer(auth.accessToken()))
@@ -55,7 +55,7 @@ class CheckoutApiTest extends BaseIntegrationTest {
         ProductResponse product = createProduct(adminToken, "Some Bar", new BigDecimal("5.00"), 10);
         addItem(auth.accessToken(), product.id(), 1);
 
-        CheckoutRequest request = new CheckoutRequest(999L, null, PaymentMethod.COD);
+        CheckoutRequest request = new CheckoutRequest(999L, null, null, PaymentMethod.COD);
 
         mockMvc.perform(post(CHECKOUT_URL)
                         .header("Authorization", bearer(auth.accessToken()))
@@ -73,7 +73,7 @@ class CheckoutApiTest extends BaseIntegrationTest {
         addItem(auth.accessToken(), product.id(), 2); // subtotal = 20.00, under free-shipping threshold
         Long addressId = createAddress(auth.accessToken());
 
-        CheckoutRequest request = new CheckoutRequest(addressId, null, PaymentMethod.COD);
+        CheckoutRequest request = new CheckoutRequest(addressId, null, null, PaymentMethod.COD);
 
         MvcResult result = mockMvc.perform(post(CHECKOUT_URL)
                         .header("Authorization", bearer(auth.accessToken()))
@@ -118,7 +118,7 @@ class CheckoutApiTest extends BaseIntegrationTest {
         addItem(auth.accessToken(), product.id(), 5); // subtotal = 50.00, exactly at threshold
         Long addressId = createAddress(auth.accessToken());
 
-        CheckoutRequest request = new CheckoutRequest(addressId, null, PaymentMethod.COD);
+        CheckoutRequest request = new CheckoutRequest(addressId, null, null, PaymentMethod.COD);
 
         mockMvc.perform(post(CHECKOUT_URL)
                         .header("Authorization", bearer(auth.accessToken()))
@@ -141,7 +141,7 @@ class CheckoutApiTest extends BaseIntegrationTest {
         reduceStockToZero(adminToken, product);
 
         Long addressId = createAddress(auth.accessToken());
-        CheckoutRequest request = new CheckoutRequest(addressId, null, PaymentMethod.COD);
+        CheckoutRequest request = new CheckoutRequest(addressId, null, null, PaymentMethod.COD);
 
         mockMvc.perform(post(CHECKOUT_URL)
                         .header("Authorization", bearer(auth.accessToken()))
@@ -163,7 +163,7 @@ class CheckoutApiTest extends BaseIntegrationTest {
         addItem(auth.accessToken(), product.id(), 1);
         Long addressId = createAddress(auth.accessToken());
 
-        CheckoutRequest request = new CheckoutRequest(addressId, "DOESNOTEXIST", PaymentMethod.COD);
+        CheckoutRequest request = new CheckoutRequest(addressId, null, "DOESNOTEXIST", PaymentMethod.COD);
 
         mockMvc.perform(post(CHECKOUT_URL)
                         .header("Authorization", bearer(auth.accessToken()))
@@ -183,7 +183,7 @@ class CheckoutApiTest extends BaseIntegrationTest {
 
         createCoupon(adminToken, "SAVE10", new BigDecimal("10"), null);
 
-        CheckoutRequest request = new CheckoutRequest(addressId, "SAVE10", PaymentMethod.COD);
+        CheckoutRequest request = new CheckoutRequest(addressId, null, "SAVE10", PaymentMethod.COD);
 
         mockMvc.perform(post(CHECKOUT_URL)
                         .header("Authorization", bearer(auth.accessToken()))
@@ -196,15 +196,15 @@ class CheckoutApiTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /orders/{id}/payment/confirm - marks a CARD payment PAID and advances order status")
-    void confirmCardPayment_marksAsPaidAndAdvancesOrder() throws Exception {
+    @DisplayName("POST /orders/{id}/payment/confirm - simulated confirmation endpoint is disabled")
+    void simulatedPaymentConfirmation_isNotFound() throws Exception {
         AuthResponse auth = registerCustomer();
         String adminToken = createAdminAndGetToken();
         ProductResponse product = createProduct(adminToken, "Card Bar", new BigDecimal("10.00"), 10);
         addItem(auth.accessToken(), product.id(), 1);
         Long addressId = createAddress(auth.accessToken());
 
-        CheckoutRequest request = new CheckoutRequest(addressId, null, PaymentMethod.CARD);
+        CheckoutRequest request = new CheckoutRequest(addressId, null, null, PaymentMethod.CARD);
         MvcResult checkoutResult = mockMvc.perform(post(CHECKOUT_URL)
                         .header("Authorization", bearer(auth.accessToken()))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -218,15 +218,7 @@ class CheckoutApiTest extends BaseIntegrationTest {
 
         mockMvc.perform(post(ORDERS_URL + "/" + order.id() + "/payment/confirm")
                         .header("Authorization", bearer(auth.accessToken())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.payment.status").value("PAID"))
-                .andExpect(jsonPath("$.payment.providerReference", org.hamcrest.Matchers.notNullValue()))
-                .andExpect(jsonPath("$.status").value("PROCESSING"));
-
-        // confirming again is rejected -- already paid
-        mockMvc.perform(post(ORDERS_URL + "/" + order.id() + "/payment/confirm")
-                        .header("Authorization", bearer(auth.accessToken())))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -239,7 +231,7 @@ class CheckoutApiTest extends BaseIntegrationTest {
         addItem(ownerAuth.accessToken(), product.id(), 1);
         Long addressId = createAddress(ownerAuth.accessToken());
 
-        CheckoutRequest request = new CheckoutRequest(addressId, null, PaymentMethod.COD);
+        CheckoutRequest request = new CheckoutRequest(addressId, null, null, PaymentMethod.COD);
         MvcResult result = mockMvc.perform(post(CHECKOUT_URL)
                         .header("Authorization", bearer(ownerAuth.accessToken()))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -291,7 +283,7 @@ class CheckoutApiTest extends BaseIntegrationTest {
                 categoryResult.getResponse().getContentAsString(), CategoryResponse.class);
 
         ProductRequest productRequest = new ProductRequest(
-                category.id(), name, "desc", price, null, stock, true, null);
+                category.id(), name, "desc", price, null, stock, true);
         MvcResult productResult = mockMvc.perform(post("/api/v1/admin/products")
                         .header("Authorization", bearer(adminToken))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -304,7 +296,7 @@ class CheckoutApiTest extends BaseIntegrationTest {
     private void reduceStockToZero(String adminToken, ProductResponse product) throws Exception {
         ProductRequest updateRequest = new ProductRequest(
                 product.categoryId(), product.name(), product.description(),
-                product.price(), product.discountPrice(), 0, true, null);
+                product.price(), product.discountPrice(), 0, true);
         mockMvc.perform(put("/api/v1/admin/products/" + product.id())
                         .header("Authorization", bearer(adminToken))
                         .contentType(MediaType.APPLICATION_JSON)
