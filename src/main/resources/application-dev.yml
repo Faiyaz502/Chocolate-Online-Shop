@@ -1,0 +1,8 @@
+app:
+  jwt:
+    # Local-development key only. Production/default profile still requires JWT_SECRET.
+    secret: ${JWT_SECRET:local-dev-only-signing-secret-do-not-use-in-production-32-bytes}
+  demo-admin:
+    # Development-only convenience credentials. Override locally; never use outside dev.
+    email: ${DEMO_ADMIN_EMAIL:admin@localhost.test}
+    password: ${DEMO_ADMIN_PASSWORD:ChocolateAdmin2026!}
