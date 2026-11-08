@@ -11,10 +11,6 @@ import jakarta.validation.constraints.NotNull;
  * only usable when logged in) or {@code shippingAddress} (a one-off inline
  * address) must be provided; validated in CheckoutService since it's a
  * cross-field rule.
- * <p>
- * {@code guestEmail} is required for guest checkout (no account to send
- * order updates to otherwise) and ignored for logged-in users, whose
- * account email is used instead.
  */
 public record CheckoutRequest(
 
@@ -22,8 +18,6 @@ public record CheckoutRequest(
 
         @Valid
         AddressRequest shippingAddress,
-
-        String guestEmail,
 
         String couponCode,
 

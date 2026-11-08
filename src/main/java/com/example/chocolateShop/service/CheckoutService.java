@@ -43,12 +43,10 @@ public class CheckoutService {
 
     @Transactional
     public OrderResponse checkout(OwnerRef owner, CheckoutRequest request) {
-        User user = owner.isGuest()
-                ? null
-                : userRepository.findById(owner.userId())
+        User user = userRepository.findById(owner.userId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + owner.userId()));
 
-        Address address = resolveShippingAddress(owner, user, request);
+        Address address = resolveShippingAddress(user, request);
 
         Cart cart = cartService.getOrCreateCart(owner);
         if (cart.getItems().isEmpty()) {
@@ -90,8 +88,6 @@ public class CheckoutService {
 
         Order order = Order.builder()
                 .user(user)
-                .ipAddress(owner.isGuest() ? owner.ipAddress() : null)
-                .guestEmail(owner.isGuest() ? request.guestEmail() : null)
                 .orderNumber(generateOrderNumber())
                 .status(OrderStatus.PENDING)
                 .subtotal(subtotal)
@@ -139,11 +135,9 @@ public class CheckoutService {
     }
 
     /**
-     * Exactly one of a saved address (logged-in users only) or an inline
-     * one-off address must be supplied. Guests can only use the inline
-     * form, since they have no account to own a saved address.
+     * Exactly one of a saved address or an inline one-off address must be supplied.
      */
-    private Address resolveShippingAddress(OwnerRef owner, User user, CheckoutRequest request) {
+    private Address resolveShippingAddress(User user, CheckoutRequest request) {
         boolean hasSavedAddressId = request.shippingAddressId() != null;
         boolean hasInlineAddress = request.shippingAddress() != null;
 
@@ -152,18 +146,8 @@ public class CheckoutService {
                     "Provide exactly one of shippingAddressId (a saved address) or shippingAddress (a one-off address)");
         }
 
-        if (owner.isGuest()) {
-            if (hasSavedAddressId) {
-                throw new IllegalArgumentException("Guest checkout requires an inline shippingAddress, not a saved shippingAddressId");
-            }
-            if (request.guestEmail() == null || request.guestEmail().isBlank()) {
-                throw new IllegalArgumentException("guestEmail is required for guest checkout");
-            }
-            return saveInlineAddress(null, request.shippingAddress());
-        }
-
         if (hasSavedAddressId) {
-            return addressRepository.findByIdAndUserId(request.shippingAddressId(), owner.userId())
+            return addressRepository.findByIdAndUserId(request.shippingAddressId(), user.getId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Address not found with id: " + request.shippingAddressId()));
         }
@@ -174,11 +158,15 @@ public class CheckoutService {
     private Address saveInlineAddress(User user, AddressRequest addressRequest) {
         Address address = Address.builder()
                 .user(user)
-                .thana(addressRequest.thana())
+                .label(addressRequest.label())
                 .recipientName(addressRequest.recipientName())
                 .phone(addressRequest.phone())
-                .district(addressRequest.district())
+                .line1(addressRequest.line1())
+                .line2(addressRequest.line2())
+                .city(addressRequest.city())
+                .state(addressRequest.state())
                 .postalCode(addressRequest.postalCode())
+                .country(addressRequest.country())
                 .isDefault(false)
                 .build();
         return addressRepository.save(address);
