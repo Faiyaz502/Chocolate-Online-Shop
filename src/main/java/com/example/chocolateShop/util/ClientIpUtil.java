@@ -7,10 +7,8 @@ public final class ClientIpUtil {
     private ClientIpUtil() {}
 
     public static String resolve(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
-        }
+        // Forwarded headers are attacker controlled unless a trusted proxy
+        // strips and rewrites them. Use the socket peer address here.
         return request.getRemoteAddr();
     }
 }

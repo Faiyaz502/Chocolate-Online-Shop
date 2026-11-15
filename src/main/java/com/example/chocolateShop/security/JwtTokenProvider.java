@@ -25,7 +25,10 @@ public class JwtTokenProvider {
 
     @PostConstruct
     protected void init() {
-        this.signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        if (jwtSecret == null || jwtSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("JWT_SECRET must contain at least 32 bytes of cryptographically random data");
+        }
+        this.signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     public String generateAccessToken(Long userId, String email, String role) {
@@ -55,11 +58,11 @@ public class JwtTokenProvider {
             parseClaims(token);
             return true;
         } catch (ExpiredJwtException e) {
-            log.debug("JWT expired: {}", e.getMessage());
+            log.debug("JWT expired");
         } catch (UnsupportedJwtException | MalformedJwtException | SecurityException e) {
-            log.warn("Invalid JWT: {}", e.getMessage());
+            log.warn("Invalid JWT rejected");
         } catch (IllegalArgumentException e) {
-            log.warn("JWT claims string is empty: {}", e.getMessage());
+            log.warn("JWT with invalid claims rejected");
         }
         return false;
     }
