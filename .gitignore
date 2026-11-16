@@ -1,5 +1,10 @@
 HELP.md
+DEMO_DATA.md
+SECURITY_AUDIT_CONTEXT.md
+API_FRONTEND_GUIDE.md
+SECURITY_CHANGES.md
 target/
+/uploads/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

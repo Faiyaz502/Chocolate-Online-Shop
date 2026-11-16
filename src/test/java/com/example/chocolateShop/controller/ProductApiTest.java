@@ -2,7 +2,6 @@ package com.example.chocolateShop.controller;
 
 import com.example.chocolateShop.dtos.category.CategoryRequest;
 import com.example.chocolateShop.dtos.category.CategoryResponse;
-import com.example.chocolateShop.dtos.product.ProductImageRequest;
 import com.example.chocolateShop.dtos.product.ProductRequest;
 import com.example.chocolateShop.dtos.product.ProductResponse;
 import com.example.chocolateShop.support.BaseIntegrationTest;
@@ -10,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.math.BigDecimal;
 import java.util.HashSet;
@@ -34,15 +34,14 @@ class ProductApiTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /admin/products - admin can create with images")
-    void create_asAdmin_createsWithImages() throws Exception {
+    @DisplayName("POST /admin/products - admin creates product without images")
+    void create_asAdmin_createsProductWithoutImages() throws Exception {
         String adminToken = createAdminAndGetToken();
         Long categoryId = createCategory(adminToken, "Dark Chocolate").id();
 
         ProductRequest request = new ProductRequest(
                 categoryId, "70% Dark Bar", "Intense and bold", new BigDecimal("12.50"), null,
-                50, true,
-                List.of(new ProductImageRequest("https://example.com/bar.jpg", 0, true)));
+                50, true);
 
         mockMvc.perform(post(ADMIN_URL)
                         .header("Authorization", bearer(adminToken))
@@ -52,8 +51,7 @@ class ProductApiTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.name").value("70% Dark Bar"))
                 .andExpect(jsonPath("$.slug").value("70-dark-bar"))
                 .andExpect(jsonPath("$.effectivePrice").value(12.50))
-                .andExpect(jsonPath("$.images.length()").value(1))
-                .andExpect(jsonPath("$.images[0].primary").value(true));
+                .andExpect(jsonPath("$.images.length()").value(0));
     }
 
     @Test
@@ -61,7 +59,7 @@ class ProductApiTest extends BaseIntegrationTest {
     void create_withUnknownCategory_returnsNotFound() throws Exception {
         String adminToken = createAdminAndGetToken();
         ProductRequest request = new ProductRequest(
-                999L, "Ghost Product", null, new BigDecimal("5.00"), null, 10, true, null);
+                999L, "Ghost Product", null, new BigDecimal("5.00"), null, 10, true);
 
         mockMvc.perform(post(ADMIN_URL)
                         .header("Authorization", bearer(adminToken))
@@ -93,7 +91,7 @@ class ProductApiTest extends BaseIntegrationTest {
         Long categoryId = createCategory(adminToken, "Seasonal").id();
 
         ProductRequest request = new ProductRequest(
-                categoryId, "Discontinued Bar", null, new BigDecimal("5.00"), null, 0, false, null);
+                categoryId, "Discontinued Bar", null, new BigDecimal("5.00"), null, 0, false);
 
         mockMvc.perform(post(ADMIN_URL)
                         .header("Authorization", bearer(adminToken))
@@ -210,7 +208,7 @@ class ProductApiTest extends BaseIntegrationTest {
 
         ProductRequest updateRequest = new ProductRequest(
                 categoryId, "New Name", "New description", new BigDecimal("11.00"),
-                new BigDecimal("9.99"), 15, true, null);
+                new BigDecimal("9.99"), 15, true);
 
         mockMvc.perform(put(ADMIN_URL + "/" + created.id())
                         .header("Authorization", bearer(adminToken))
@@ -247,12 +245,15 @@ class ProductApiTest extends BaseIntegrationTest {
         ProductResponse created = createProduct(adminToken, categoryId, "Bare Bar",
                 new BigDecimal("4.00"), null, 5);
 
-        ProductImageRequest imageRequest = new ProductImageRequest("https://example.com/img.jpg", 0, true);
+        MockMultipartFile imageFile = new MockMultipartFile(
+                "file", "tiny.png", "image/png",
+                java.util.Base64.getDecoder().decode(
+                        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"));
 
-        MvcResult addResult = mockMvc.perform(post(ADMIN_URL + "/" + created.id() + "/images")
-                        .header("Authorization", bearer(adminToken))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(imageRequest)))
+        MvcResult addResult = mockMvc.perform(multipart(ADMIN_URL + "/" + created.id() + "/images")
+                        .file(imageFile)
+                        .param("primary", "true")
+                        .header("Authorization", bearer(adminToken)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.images.length()").value(1))
                 .andReturn();
@@ -285,7 +286,7 @@ class ProductApiTest extends BaseIntegrationTest {
     private ProductResponse createProduct(String adminToken, Long categoryId, String name,
                                            BigDecimal price, BigDecimal discountPrice, int stock) throws Exception {
         ProductRequest request = new ProductRequest(
-                categoryId, name, "Description for " + name, price, discountPrice, stock, true, null);
+                categoryId, name, "Description for " + name, price, discountPrice, stock, true);
 
         MvcResult result = mockMvc.perform(post(ADMIN_URL)
                         .header("Authorization", bearer(adminToken))
