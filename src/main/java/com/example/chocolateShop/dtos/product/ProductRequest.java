@@ -1,10 +1,8 @@
 package com.example.chocolateShop.dtos.product;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 public record ProductRequest(
 
@@ -28,8 +26,5 @@ public record ProductRequest(
         @Min(value = 0, message = "Stock quantity must not be negative")
         Integer stockQuantity,
 
-        Boolean active,
-
-        @Valid
-        List<ProductImageRequest> images
+        Boolean active
 ) {}
