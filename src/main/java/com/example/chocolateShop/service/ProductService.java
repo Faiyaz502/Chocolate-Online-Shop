@@ -13,6 +13,9 @@ import com.example.chocolateShop.util.SlugUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +31,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final ProductImageStorageService imageStorage;
 
     // ---------------------------------------------------------
     // Listing (cursor pagination)
@@ -125,8 +129,6 @@ public class ProductService {
                 .active(request.active() == null || request.active())
                 .build();
 
-        applyImages(product, request.images());
-
         return toResponse(productRepository.save(product));
     }
 
@@ -155,20 +157,17 @@ public class ProductService {
             product.setActive(request.active());
         }
 
-        if (request.images() != null) {
-            product.getImages().clear();
-            applyImages(product, request.images());
-        }
-
+        productRepository.saveAndFlush(product);
         return toResponse(product);
     }
 
     @Transactional
     public void delete(Long id) {
-        if (!productRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Product not found with id: " + id);
-        }
-        productRepository.deleteById(id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+        List<String> imageUrls = product.getImages().stream().map(ProductImage::getImageUrl).toList();
+        productRepository.delete(product);
+        deleteFilesAfterCommit(imageUrls);
     }
 
     // ---------------------------------------------------------
@@ -176,22 +175,65 @@ public class ProductService {
     // ---------------------------------------------------------
 
     @Transactional
-    public ProductResponse addImage(Long productId, ProductImageRequest request) {
+    public ProductResponse addImage(Long productId, MultipartFile file, Integer displayOrder, Boolean primary) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
-        ProductImage image = ProductImage.builder()
-                .imageUrl(request.imageUrl())
-                .displayOrder(request.displayOrder() != null ? request.displayOrder() : product.getImages().size())
-                .primary(Boolean.TRUE.equals(request.primary()))
-                .build();
-
-        if (image.isPrimary()) {
+        ProductImageStorageService.StoredProductImage stored = imageStorage.store(file);
+        deleteNewFileOnRollback(stored.url());
+        boolean makePrimary = Boolean.TRUE.equals(primary) || product.getImages().isEmpty();
+        if (makePrimary) {
             product.getImages().forEach(existing -> existing.setPrimary(false));
         }
-
+        ProductImage image = ProductImage.builder()
+                .imageUrl(stored.url())
+                .displayOrder(displayOrder != null ? displayOrder : product.getImages().size())
+                .primary(makePrimary)
+                .build();
         product.addImage(image);
-        return toResponse(product);
+        try {
+            productRepository.saveAndFlush(product);
+            return toResponse(product);
+        } catch (RuntimeException ex) {
+            imageStorage.deleteManagedUrl(stored.url());
+            throw ex;
+        }
+    }
+
+    @Transactional
+    public ProductResponse replaceImage(
+            Long productId,
+            Long imageId,
+            MultipartFile file,
+            Integer displayOrder,
+            Boolean primary
+    ) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+        ProductImage image = product.getImages().stream()
+                .filter(item -> item.getId().equals(imageId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Image " + imageId + " not found on product " + productId));
+
+        ProductImageStorageService.StoredProductImage stored = imageStorage.store(file);
+        deleteNewFileOnRollback(stored.url());
+        String oldUrl = image.getImageUrl();
+        if (Boolean.TRUE.equals(primary)) {
+            product.getImages().forEach(existing -> existing.setPrimary(false));
+        }
+        image.setImageUrl(stored.url());
+        if (displayOrder != null) image.setDisplayOrder(displayOrder);
+        if (primary != null) image.setPrimary(primary);
+
+        try {
+            productRepository.saveAndFlush(product);
+            deleteFilesAfterCommit(List.of(oldUrl));
+            return toResponse(product);
+        } catch (RuntimeException ex) {
+            imageStorage.deleteManagedUrl(stored.url());
+            throw ex;
+        }
     }
 
     @Transactional
@@ -206,6 +248,8 @@ public class ProductService {
                         "Image " + imageId + " not found on product " + productId));
 
         product.removeImage(toRemove);
+        productRepository.saveAndFlush(product);
+        deleteFilesAfterCommit(List.of(toRemove.getImageUrl()));
         return toResponse(product);
     }
 
@@ -213,21 +257,30 @@ public class ProductService {
     // Helpers
     // ---------------------------------------------------------
 
-    private void applyImages(Product product, List<ProductImageRequest> images) {
-        if (images == null || images.isEmpty()) return;
+    private void deleteFilesAfterCommit(List<String> imageUrls) {
+        Runnable cleanup = () -> imageUrls.forEach(imageStorage::deleteManagedUrl);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    cleanup.run();
+                }
+            });
+        } else {
+            cleanup.run();
+        }
+    }
 
-        boolean anyPrimarySet = images.stream().anyMatch(i -> Boolean.TRUE.equals(i.primary()));
-        int order = 0;
-        for (ProductImageRequest imgReq : images) {
-            ProductImage image = ProductImage.builder()
-                    .imageUrl(imgReq.imageUrl())
-                    .displayOrder(imgReq.displayOrder() != null ? imgReq.displayOrder() : order)
-                    .primary(anyPrimarySet
-                            ? Boolean.TRUE.equals(imgReq.primary())
-                            : order == 0) // default: first image is primary if none specified
-                    .build();
-            product.addImage(image);
-            order++;
+    private void deleteNewFileOnRollback(String imageUrl) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status != STATUS_COMMITTED) {
+                        imageStorage.deleteManagedUrl(imageUrl);
+                    }
+                }
+            });
         }
     }
 
